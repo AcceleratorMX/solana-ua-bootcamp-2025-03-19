@@ -1,0 +1,20 @@
+{
+  "name": "practice-1",
+  "version": "1.0.0",
+  "description": "В практику 1 входять завдання 1 та завдання 2 зі слайдів.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@solana-developers/helpers": "^2.8.1",
+    "@solana/web3.js": "^1.98.0",
+    "esrun": "^3.2.26"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  }
+}
