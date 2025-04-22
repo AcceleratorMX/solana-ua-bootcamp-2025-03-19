@@ -33,6 +33,20 @@ pub struct SetFavorites<'info> {
     pub system_program: Program<'info, System>,
 }
 
+#[derive(Accounts)]
+pub struct UpdateFavorites<'info> {
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"favorites", user.key().as_ref()],
+        bump,
+    )]
+    pub favorites: Account<'info, Favorites>
+
+}
+
 // Our Solana program!
 #[program]
 pub mod favorites {
@@ -56,5 +70,29 @@ pub mod favorites {
         Ok(())
     }
 
-    // We can also add a get_favorites instruction to get the user's favorite number and color
+    pub fn update_favorites(
+        context: Context<UpdateFavorites>, 
+        number: Option<u64>, 
+        color: Option<String>
+    ) -> Result<()> {
+        let user_public_key = context.accounts.user.key();
+        msg!("Updating favorites for user {}", user_public_key);
+        
+        let favorites = &mut context.accounts.favorites;
+        
+        // Update number
+        if let Some(new_number) = number {
+            msg!("Updated favorite number to {}", new_number);
+            favorites.number = new_number;
+        }
+        
+        // Update color
+        if let Some(new_color) = color {
+            msg!("Updated favorite color to {}", new_color);
+            favorites.color = new_color;
+        }
+        
+        Ok(())
+    }
+    
 }
