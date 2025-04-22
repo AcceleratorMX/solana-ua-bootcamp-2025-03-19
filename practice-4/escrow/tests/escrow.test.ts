@@ -108,9 +108,9 @@ const getTokenBalanceOn = (
 ) => async (
   tokenAccountAddress: PublicKey,
 ): Promise<BN> => {
-  const tokenBalance = await connection.getTokenAccountBalance(tokenAccountAddress);
-  return new BN(tokenBalance.value.amount);
-};
+    const tokenBalance = await connection.getTokenAccountBalance(tokenAccountAddress);
+    return new BN(tokenBalance.value.amount);
+  };
 
 // Jest debug console it too verbose.
 // const jestConsole = console;
@@ -204,9 +204,9 @@ describe("escrow", () => {
     ]);
   });
 
-//   afterAll(() => {
-//     global.console = jestConsole;
-//   });
+  //   afterAll(() => {
+  //     global.console = jestConsole;
+  //   });
 
   const makeOfferTx = async (
     maker: Keypair,
@@ -273,11 +273,11 @@ describe("escrow", () => {
   ): Promise<void> => {
 
     // `accounts` argument debugging tool.  Should be part of Anchor really.
-    
+
     // type FlatType<T> = T extends object
     //   ? { [K in keyof T]: FlatType<T[K]> }
     //   : T;
-    
+
     // type AccountsArgs = FlatType<
     //   Parameters<
     //     ReturnType<
@@ -299,6 +299,32 @@ describe("escrow", () => {
       .rpc();
 
     await confirmTransaction(connection, transactionSignature);
+  };
+
+  const closeOfferTx = async (
+    maker: Keypair,
+    offerAddress: PublicKey,
+    vaultAddress: PublicKey,
+    tokenMintA: PublicKey,
+    tokenMintB: PublicKey,
+    makerTokenAccountA: PublicKey
+  ): Promise<string> => {
+    const transactionSignature = await program.methods
+      .closeOffer()
+      .accounts({
+        maker: maker.publicKey,
+        offer: offerAddress,
+        vault: vaultAddress,
+        tokenMintA: tokenMintA,
+        tokenMintB: tokenMintB,
+        makerTokenAccountA: makerTokenAccountA,
+        tokenProgram: TOKEN_PROGRAM,
+        systemProgram: SystemProgram.programId,
+      } as any)
+      .signers([maker])
+      .rpc();
+
+    return transactionSignature;
   };
 
   test("Offer created by Alice, vault holds the offer tokens", async () => {
@@ -358,5 +384,60 @@ describe("escrow", () => {
 
     expect(await getTokenBalance(bobUsdcAccount)).toEqual(new BN(30_000_000));
     expect(await getTokenBalance(bobWifAccount)).toEqual(new BN(200_000_000));
+  });
+
+  test("Offer closed by Alice, tokens are returned to the maker", async () => {
+    const offeredUsdc = new BN(10_000_000);
+    const wantedWif = new BN(100_000_000);
+
+    const getTokenBalance = getTokenBalanceOn(connection);
+
+    console.log(
+      "Alice USDC balance before offer:",
+      (await getTokenBalance(aliceUsdcAccount)).toString()
+    );
+    expect(await getTokenBalance(aliceUsdcAccount)).toEqual(new BN(90_000_000));
+
+    const newOfferId = getRandomBigNumber();
+
+    const { offerAddress, vaultAddress } = await makeOfferTx(
+      alice,
+      newOfferId,
+      usdcMint.publicKey,
+      offeredUsdc,
+      wifMint.publicKey,
+      wantedWif
+    );
+
+    console.log(
+      "Alice USDC balance after offer:",
+      (await getTokenBalance(aliceUsdcAccount)).toString()
+    );
+    console.log(
+      "Vault balance after offer:",
+      (await getTokenBalance(vaultAddress)).toString()
+    );
+    expect(await getTokenBalance(aliceUsdcAccount)).toEqual(new BN(80_000_000));
+    expect(await getTokenBalance(vaultAddress)).toEqual(offeredUsdc);
+
+    const transactionSignature = await closeOfferTx(
+      alice,
+      offerAddress,
+      vaultAddress,
+      usdcMint.publicKey,
+      wifMint.publicKey,
+      aliceUsdcAccount
+    );
+
+    await confirmTransaction(connection, transactionSignature);
+
+    console.log(
+      "Alice USDC balance after closing:",
+      (await getTokenBalance(aliceUsdcAccount)).toString()
+    );
+    expect(await getTokenBalance(aliceUsdcAccount)).toEqual(new BN(90_000_000));
+
+    const vaultInfo = await connection.getAccountInfo(vaultAddress);
+    expect(vaultInfo).toBeNull();
   });
 });
