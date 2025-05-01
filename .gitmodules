@@ -1,0 +1,3 @@
+[submodule "practice-5/solana-bootcamp-empty"]
+	path = practice-5/solana-bootcamp-empty
+	url = https://github.com/AcceleratorMX/solana-bootcamp-empty.git
